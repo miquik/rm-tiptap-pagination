@@ -8,7 +8,7 @@ import Home from './pages/Home';
 import { AnimatePresence } from 'framer-motion';
 import { BASE_PATH } from './lib/config';
 import ImagePlus from './pages/ImagePlus';
-import TablePlusWithoutPagination from './pages/TablePlusWithoutPagination';
+// import TablePlusWithoutPagination from './pages/TablePlusWithoutPagination';
 import TablePlusWithPagination from './pages/TablePlusWithPagination';
 function App() {
   return (
@@ -18,7 +18,6 @@ function App() {
             <Routes >
               <Route path='*' element={<Home />} />
               <Route path='image-plus' element={<ImagePlus />} />
-              <Route path='table-plus' element={<TablePlusWithoutPagination />} />
               <Route path='table-plus-with-pagination' element={<TablePlusWithPagination />} />
             </Routes>
           </AnimatePresence>

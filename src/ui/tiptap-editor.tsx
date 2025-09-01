@@ -6,11 +6,13 @@ import Underline from "@tiptap/extension-underline";
 import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import ListItem from "@tiptap/extension-list-item";
-import { PaginationTable } from "tiptap-table-plus";
-import { PaginationPlus } from "tiptap-pagination-plus";
+import { PaginationTable } from "@/tableplus";
+// import { PaginationTable } from "tiptap-table-plus";
+// import { PaginationPlus } from "tiptap-pagination-plus";
 import { ImagePlus } from "tiptap-image-plus";
 import { editorContent } from "@/lib/editor-content";
 import { Toolbar } from "./editor/toolbar";
+import { PaginationPlusM22 } from "@/plugin/paginationPlus";
 
 const { TablePlus, TableRowPlus, TableCellPlus, TableHeaderPlus } =
   PaginationTable;
@@ -35,22 +37,22 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
           borderRadius: "10px",
         },
       }),
-      PaginationPlus.configure({
+      PaginationPlusM22.configure({
         pageHeight: 842,
         pageGap: 20,
         pageBreakBackground: "hsl(var(--background))",
         pageHeaderHeight: 25,
-        pageFooterHeight: 25,
+        // pageFooterHeight: 25,
         footerRight: "Made with ❤️ by Romik",
         footerLeft: "Page {page}",
         headerLeft: "Header Left",
         headerRight: "Header Right",
-        marginTop: 30,
-        marginBottom: 50,
-        marginLeft: 70,
-        marginRight: 70,
-        contentMarginTop: 30,
-        contentMarginBottom: 30,
+        // marginTop: 30,
+        // marginBottom: 50,
+        // marginLeft: 70,
+        // marginRight: 70,
+        // contentMarginTop: 30,
+        // contentMarginBottom: 30,
       }),
     ],
     // content: editorContentLong,

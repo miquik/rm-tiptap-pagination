@@ -7,8 +7,10 @@ import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import { editorContent } from "@/lib/contents/table-plus-with-pagination";
 import { Toolbar } from "@/ui/editor/toolbar";
-import { PaginationTable } from "tiptap-table-plus";
-import { PaginationPlus } from "tiptap-pagination-plus";
+// import { PaginationTable } from "tiptap-table-plus";
+import { PaginationTable } from "@/tableplus";
+import { PaginationPlusM22 } from "@/plugin/paginationPlus";
+// import { PaginationPlus } from "tiptap-pagination-plus";
 
 const { TableCellPlus, TableHeaderPlus, TableRowPlus, TablePlus } = PaginationTable;
 
@@ -23,22 +25,22 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
       TableRowPlus,
       TableCellPlus,
       TableHeaderPlus,
-      PaginationPlus.configure({
+      PaginationPlusM22.configure({
         pageHeight: 842,
         pageGap: 20,
         pageBreakBackground: "hsl(var(--background))",
         pageHeaderHeight: 25,
-        pageFooterHeight: 25,
+        // pageFooterHeight: 25,
         footerRight: "Made with ❤️ by Romik",
         footerLeft: "Page {page}",
         headerLeft: "Header Left",
         headerRight: "Header Right",
-        marginTop: 30,
-        marginBottom: 50,
-        marginLeft: 70,
-        marginRight: 70,
-        contentMarginTop: 30,
-        contentMarginBottom: 30,
+        // marginTop: 30,
+        // marginBottom: 50,
+        // marginLeft: 70,
+        // marginRight: 70,
+        // contentMarginTop: 30,
+        // contentMarginBottom: 30,
       }),
     ],
     content: editorContent,
