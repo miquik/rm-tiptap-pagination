@@ -391,9 +391,14 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
               pageOptions,
               true
             );
+            const widgeDivtList = createDividerDecoration(
+                editor,
+                state,
+                pageOptions
+              );
             return {
-              pageBreaks: DecorationSet.create(state.doc, widgetList),
-              pageCount: DecorationSet.create(state.doc, widgetList),
+              pageBreaks: DecorationSet.create(state.doc, [...widgeDivtList]),
+              pageCount: DecorationSet.create(state.doc, [...widgetList]),
             };
           },
           apply(tr, oldDeco, oldState, newState) {
