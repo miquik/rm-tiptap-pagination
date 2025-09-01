@@ -11,6 +11,7 @@ import { Toolbar } from "@/ui/editor/toolbar";
 import { PaginationTable } from "@/tableplus";
 import { PaginationPlusM22 } from "@/plugin/paginationPlusM22";
 import { PaginationPlus } from "@/plugin/paginationPlus";
+import { PageBreak } from "@/extension/pageBreak";
 // import { PaginationPlus } from "tiptap-pagination-plus";
 
 const { TableCellPlus, TableHeaderPlus, TableRowPlus, TablePlus } = PaginationTable;
@@ -26,6 +27,7 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
       TableRowPlus,
       TableCellPlus,
       TableHeaderPlus,
+      PageBreak,
       PaginationPlusM22.configure({
         pageHeight: 842,
         pageGap: 20,

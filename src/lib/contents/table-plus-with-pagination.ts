@@ -14,6 +14,12 @@ export const editorContent = {
           ]
       },
       {
+        "type": "pb",
+        "attrs": {
+            "bid": "3735beb6-085e-468b-ae25-b1ed1597b13f"
+        }
+      },
+      {
           "type": "table",
           "content": [
               {
