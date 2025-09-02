@@ -3,6 +3,8 @@ import { EditorState, Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, EditorView } from "@tiptap/pm/view";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
+let debugCounter = 0
+
 interface PaginationPlusOptions {
   pageHeight: number;
   pageWidth: number;
@@ -16,6 +18,16 @@ interface PaginationPlusOptions {
   footerLeft: string;
   headerRight: string;
   headerLeft: string;
+}
+
+interface PaginationPlusStorageOptions {
+  breaksHaveChanged: boolean;
+  breaksLastTop: number[]
+  ignoreObserver: boolean
+  lastStatePageGap: number
+  accBreaksHeight: number
+  breaks: Map<string, BreakInfo>
+  breaksToUpdate: number
 }
 
 type PageInfo = {
@@ -107,9 +119,9 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
       ignoreObserver: false,
       lastStatePageGap: 0,
       accBreaksHeight: 0,
-      breaks: new Map<HTMLElement, BreakInfo>(),
+      breaks: new Map<string, BreakInfo>(),
       breaksToUpdate: 0,
-    };
+    } as PaginationPlusStorageOptions;
   },
   onCreate() {
     const editorNode = this.editor.view.dom.parentElement;
@@ -302,6 +314,13 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
             );
 
             // abbiamo ricalcolato le altezze, adesso generiamo i nuovi DecorationSet
+            const currentPageCount = getExistingPageCount(this.editor.view);
+            const pageCount = calculatePageCount(
+              this.editor.view,
+              this.editor.storage,
+              this.options
+            );
+            console.log('breaks: %d - exist: %d - calc: %d', debugCounter++, currentPageCount, pageCount)
             const tr = this.editor.view.state.tr.setMeta(
               page_breaks_meta_key,
               Date.now()
@@ -320,6 +339,7 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
               this.options
             );
             if (currentPageCount !== pageCount) {
+              console.log('pageCount: %d - exist: %d - calc: %d', debugCounter++, currentPageCount, pageCount)
               const tr = this.editor.view.state.tr.setMeta(
                 page_count_meta_key,
                 Date.now()
@@ -651,7 +671,7 @@ const calculatePageBreaksHeight = (
 ) => {
   // L'idea è quella di modificare le altezze dei page-vdiv esistenti
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const storage = store.PaginationPlus
+  const storage = store.PaginationPlus as PaginationPlusStorageOptions
   const editorDom = view.dom;
   const parentOffset = editorDom.offsetTop;
 
@@ -737,7 +757,7 @@ const calculatePageBreaksHeight = (
             breakHeight = 1;
           }
 
-          storage.breaks.set(pbElement.dataset.bid, {
+          storage.breaks.set(pbElement.dataset.bid!, {
             type: 0,
             dir: 1,
             height: breakHeight,
@@ -781,6 +801,69 @@ const calculatePageBreaksHeight = (
             // pageVDiv.style.marginTop = minH
           }
           */
+        }
+
+        if (pbElement.dataset.break === "before") {
+          const { offsetTop } = measureElement(
+            pbElement.previousElementSibling as HTMLElement,
+            parentOffset,
+            scrollTop
+          );
+
+          const dirOffsetTop = offsetTop + height;
+          const pi = getPagesInfo(
+            dirOffsetTop,
+            pageContentAreaHeight +
+              pageOptions.pageHeaderHeight +
+              headerFooterHeight,
+            pageContentAreaHeight + headerFooterHeight,
+            // headerFooterHeight
+          );
+
+          let breakHeight =
+            (pi.index === 0
+              ? pageContentAreaHeight + pageOptions.pageHeaderHeight + 0
+              : pageContentAreaHeight + 0) -
+            pi.mt -
+            0;
+          const pad = null
+          if (pad) {
+            pbElement.style.marginTop = `${pad}px`;
+          }
+
+          
+          if (breakHeight < 0) {
+            breakHeight = 1;
+          }
+
+          storage.breaks.set(pbElement.dataset.bid!, {
+            type: 0,
+            dir: -1,
+            height: breakHeight,
+          });
+
+          let pageVDiv = null
+          for (const pv of pageVDivs) {
+            if ((pv as HTMLElement).dataset.bid === pbElement.dataset.bid) {
+                pageVDiv = (pv as HTMLElement)
+                break;
+            }
+          }
+
+          // Se il divisore esiste modifichiamo l'altezza, altrimenti creiamo un nuovo divisore
+          if (pageVDiv) {
+            const minH = `${breakHeight}px`;
+            pageVDiv.style.minHeight = minH;
+          } else {
+            // il divisore non esiste, lo creiamo
+            view.dom.insertBefore(
+              addTempBreakElement(pbElement.dataset.bid!, breakHeight),
+              pbElement
+            );            
+          }
+
+          // impostiamo alla fine dopo l'inserimento del pageVDiv
+          storage.breaksLastTop[index] = pbElement.offsetTop;
         }
         // storage.breaksToUpdate--;
         index++;
@@ -1014,7 +1097,7 @@ function createDividerDecoration(
   const breaksDeco: Decoration[] = [];
 
   if (editor.storage.PaginationPlus.breaks.size > 0) {
-    state.doc.forEach((node, offset, index) => {
+    state.doc.forEach((node, offset) => {
       if (node.type.name === "pb") {
         const curBreak = editor.storage.PaginationPlus.breaks.get(
           node.attrs.bid
@@ -1023,7 +1106,7 @@ function createDividerDecoration(
         const pageVDiv = document.createElement("div");
         pageVDiv.classList.add("page-vdiv");
         pageVDiv.style.width = "100%";
-        pageVDiv.style.backgroundColor = index == 0 ? "green" : "blue";
+        pageVDiv.style.backgroundColor = node.attrs.type && node.attrs.type === "after" ? "blue" : "green";
         // pageVDiv.style.marginTop = (curBreak.height || 0) + "px";
         // pageVDiv.style.height = "1px";
         pageVDiv.style.height = (curBreak.height || 0) + "px";

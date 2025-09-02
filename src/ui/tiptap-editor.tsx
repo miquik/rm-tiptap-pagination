@@ -13,6 +13,7 @@ import { ImagePlus } from "tiptap-image-plus";
 import { editorContent } from "@/lib/editor-content";
 import { Toolbar } from "./editor/toolbar";
 import { PaginationPlusM22 } from "@/plugin/paginationPlusM22";
+import { PageBreak } from "@/extension/pageBreak";
 
 const { TablePlus, TableRowPlus, TableCellPlus, TableHeaderPlus } =
   PaginationTable;
@@ -28,6 +29,7 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
       TableRowPlus,
       TableCellPlus,
       TableHeaderPlus,
+      PageBreak,
       ListItem,
       ImagePlus.configure({
         containerStyle: {
