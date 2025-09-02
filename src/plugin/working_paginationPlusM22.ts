@@ -20,6 +20,15 @@ interface PaginationPlusOptions {
   headerLeft: string;
 }
 
+interface PaginationPlusStorageOptions {
+  breaksHaveChanged: boolean;
+  breaksLastTop: number[]
+  ignoreObserver: boolean
+  lastStatePageGap: number
+  accBreaksHeight: number
+  breaks: Map<string, BreakInfo>
+  breaksToUpdate: number
+}
 
 type PageInfo = {
   index: number;
@@ -30,22 +39,15 @@ type PageInfo = {
   cie: number;
 };
 
-type VDivInfo = {
+type BreakInfo = {
   type: number; // 0 = PAGEBREAK, 1 = FIGURE
   dir: number; // -1 = before, 1 = after
   height: number;
-  lastTop: number;
 };
 
-interface PaginationPlusStorageOptions {
-  ignoreObserver: boolean
-  vdivs: Map<string, VDivInfo>
-}
-
-
 type DecoSets = {
-  vdivs: DecorationSet; // 
-  pageCount: DecorationSet; // es: pageCount
+  pageBreaks: DecorationSet; // es: page breaks
+  pageCount: DecorationSet; // es: widgets
 };
 
 function mergeSets(
@@ -58,28 +60,28 @@ function mergeSets(
   return DecorationSet.create(doc, all);
 }
 
-const vdivsMustBeRecalculated = (
+const pbsMustBeRecalculated = (
   pbs: NodeListOf<Element>,
-  vdivs: Map<string, VDivInfo>
+  breaksLastTop: number[]
 ) => {
   // il numero di pbs è cambiato
-  if (pbs.length != vdivs.size) {
+  if (pbs.length != breaksLastTop.length) {
     return true;
   }
   // offsetTop di qualche pbs è cambiato
+  let index = 0;
   for (const pb of pbs) {
-    const pbElement = pb as HTMLElement
-    const br = vdivs.get(pbElement.dataset.bid ?? "")
-    if (!br || pbElement.offsetTop != br.lastTop) {
+    if ((pb as HTMLElement).offsetTop != breaksLastTop[index]) {
       return true;
     }
+    index++;
   }
 
-  // la struttura dei pbs non è più corretta (vdiv-spacer deve essere il vicino superiore o inferiore del pb)
+  // la struttura dei pbs non è più corretta (page-vdiv deve essere il vicino superiore o inferiore del pb)
   for (const pb of pbs) {
     if (
-      pb.nextElementSibling?.classList.contains("vdiv-spacer") === false &&
-      pb.previousElementSibling?.classList.contains("vdiv-spacer") === false
+      pb.nextElementSibling?.classList.contains("page-vdiv") === false &&
+      pb.previousElementSibling?.classList.contains("page-vdiv") === false
     ) {
       return true;
     }
@@ -91,8 +93,7 @@ const vdivsMustBeRecalculated = (
 let pauseObserver = false;
 
 const page_count_meta_key = "PAGE_COUNT_META_KEY";
-const vdivs_meta_key = "VDIVS_META_KEY";
-
+const page_breaks_meta_key = "PAGE_BREAKS_META_KEY";
 export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
   name: "PaginationPlus",
   addOptions() {
@@ -113,8 +114,13 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
   },
   addStorage() {
     return {
+      breaksHaveChanged: false,
+      breaksLastTop: [],
       ignoreObserver: false,
-      vdivs: new Map<string, VDivInfo>(),
+      lastStatePageGap: 0,
+      accBreaksHeight: 0,
+      breaks: new Map<string, BreakInfo>(),
+      breaksToUpdate: 0,
     } as PaginationPlusStorageOptions;
   },
   onCreate() {
@@ -293,31 +299,30 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
         if (m.target && !pauseObserver) {
           const pbs = this.editor.view.dom.querySelectorAll("[data-break]");
           if (
-            vdivsMustBeRecalculated(
+            pbsMustBeRecalculated(
               pbs,
-              this.editor.storage.PaginationPlus.vdivs
+              this.editor.storage.PaginationPlus.breaksLastTop
             )
           ) {
             // ricalcoliamo le altezze dei PBS
             pauseObserver = true;
 
-            calculateVDivsHeight(
+            calculatePageBreaksHeight(
               this.editor.view,
               this.editor.storage,
               this.options
             );
 
-            /*
-            // DEBUG
+            // abbiamo ricalcolato le altezze, adesso generiamo i nuovi DecorationSet
             const currentPageCount = getExistingPageCount(this.editor.view);
             const pageCount = calculatePageCount(
-              this.editor.view,             
+              this.editor.view,
+              this.editor.storage,
               this.options
             );
             console.log('breaks: %d - exist: %d - calc: %d', debugCounter++, currentPageCount, pageCount)
-            */
             const tr = this.editor.view.state.tr.setMeta(
-              vdivs_meta_key,
+              page_breaks_meta_key,
               Date.now()
             );
             this.editor.view.dispatch(tr);
@@ -329,11 +334,12 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
           if (_target.classList.contains("rm-with-pagination")) {
             const currentPageCount = getExistingPageCount(this.editor.view);
             const pageCount = calculatePageCount(
-              this.editor.view,              
+              this.editor.view,
+              this.editor.storage,
               this.options
             );
             if (currentPageCount !== pageCount) {
-              // DEBUG console.log('pageCount: %d - exist: %d - calc: %d', debugCounter++, currentPageCount, pageCount)
+              console.log('pageCount: %d - exist: %d - calc: %d', debugCounter++, currentPageCount, pageCount)
               const tr = this.editor.view.state.tr.setMeta(
                 page_count_meta_key,
                 Date.now()
@@ -344,6 +350,46 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
             refreshPage(_target);
           }
         }
+        /*
+        if (m.target) {
+          const _target = m.target as HTMLElement;
+          if (_target.classList.contains("rm-with-pagination")) {
+            if (this.editor.storage.PaginationPlus.breaksToUpdate === 0) {
+              refreshPage(_target);
+              generalStore.set(debugAtom, {
+                pages: {
+                  total: parseFloat(this.editor.view.dom.style.minHeight),
+                  guess: getExistingPageCount(this.editor.view),
+                  calc:
+                    parseFloat(this.editor.view.dom.style.minHeight) /
+                    this.options.pageHeight,
+                },
+              });
+            }
+          }
+        }
+
+        if (m.attributeName === "data-pm-mutator") {
+          if (this.editor.storage.PaginationPlus.breaksToUpdate > 0) {
+            const complete = calculatePageBreaksHeight(
+              this.editor.view,
+              this.editor.storage,
+              this.options
+            );
+            if (!complete) {
+              // altri breaks da calcolare
+              marker.setAttribute("data-pm-mutator", Date.now().toString());
+            } else {
+              refreshPage(targetNode);
+            }
+            const tr = this.editor.view.state.tr.setMeta(
+              page_count_meta_key,
+              Date.now()
+            );
+            this.editor.view.dispatch(tr);
+          }
+        }
+        */
       }
     };
     const observer = new MutationObserver(callback);
@@ -365,30 +411,41 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
               pageOptions,
               true
             );
-            const widgeDivsList = createDividerDecoration(
+            const widgeDivtList = createDividerDecoration(
                 editor,
                 state,
                 pageOptions
               );
             return {
-              vdivs: DecorationSet.create(state.doc, [...widgeDivsList]),
+              pageBreaks: DecorationSet.create(state.doc, [...widgeDivtList]),
               pageCount: DecorationSet.create(state.doc, [...widgetList]),
             };
           },
-          apply(tr, oldDeco, _, newState) {
-            let { vdivs, pageCount } = oldDeco;
+          apply(tr, oldDeco, oldState, newState) {
+            /*
             if (tr.docChanged) {
-              vdivs = vdivs.map(tr.mapping, tr.doc);
+              const marker = document.querySelector("[data-pm-mutator]");
+              if (marker) {
+                const pbs = editor.view.dom.querySelectorAll("[data-break]");
+                editor.storage.PaginationPlus.breaksToUpdate = pbs.length;
+                marker.setAttribute("data-pm-mutator", Date.now().toString());
+              }
+            }
+            */
+            let { pageBreaks, pageCount } = oldDeco;
+            if (tr.docChanged) {
+              pageBreaks = pageBreaks.map(tr.mapping, tr.doc);
               pageCount = pageCount.map(tr.mapping, tr.doc);
             }
 
-            if (tr.getMeta(vdivs_meta_key)) {
+            if (tr.getMeta(page_breaks_meta_key)) {
               const widgetList = createDividerDecoration(
                 editor,
                 newState,
                 pageOptions
               );
-              vdivs = DecorationSet.create(newState.doc, [...widgetList]);
+              pageBreaks = DecorationSet.create(newState.doc, [...widgetList]);
+              // return DecorationSet.create(newState.doc, [...widgetList]);
             }
 
             if (tr.getMeta(page_count_meta_key)) {
@@ -398,16 +455,59 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
                 pageOptions
               );
               pageCount = DecorationSet.create(newState.doc, [...widgetList]);
+              // return DecorationSet.create(newState.doc, [...widgetList]);
             }
-            return { vdivs, pageCount };
+            return { pageBreaks, pageCount };
           },
         },
+
+        /*
+        view(editorView) {
+          return {
+            update(view, prevState) {
+              generalStore.set(debugAtom, {
+                pages: {
+                  total: parseFloat(view.dom.style.minHeight),
+                  guess: getExistingPageCount(editor.view),
+                  calc:
+                    parseFloat(view.dom.style.minHeight) /
+                    pageOptions.pageHeight,
+                },
+              });
+            },
+          };
+        },
+        */
+        /*
+        view(editorView) {
+          // https://chatgpt.com/c/687fc44d-9a44-8329-a4d2-a71340df6a17
+          const marker = document.createElement("div");
+          marker.setAttribute("data-pm-mutator", "0");
+          marker.style.display = "none"; // invisibile
+          editorView.dom.parentElement?.appendChild(marker);
+
+          return {
+            update(view, prevState) {
+              if (view.state.doc !== prevState.doc) {
+                // Dobbiamo aggiornare i breaks
+                // Quanti ce ne sono?
+                const pbs = view.dom.querySelectorAll("[data-break]");
+                editor.storage.PaginationPlus.breaksToUpdate = pbs.length;
+                marker.setAttribute("data-pm-mutator", Date.now().toString());
+              }
+            },
+            destroy() {
+              marker.remove();
+            },
+          };
+        },
+        */
 
         props: {
           decorations(state: EditorState) {
             const s = this.getState(state);
             if (!s) return null;
-            return mergeSets(state.doc, s.vdivs, s.pageCount);
+            return mergeSets(state.doc, s.pageBreaks, s.pageCount);
           },
         },
       }),
@@ -426,10 +526,14 @@ const getExistingPageCount = (view: EditorView) => {
 
 const calculatePageCount = (
   view: EditorView,
+  store: Record<string, unknown>,
   pageOptions: PaginationPlusOptions
 ) => {
   const editorDom = view.dom;
-
+  // const pageVDivs = editorDom.querySelectorAll(".page-vdiv");
+  // const cnt = pageVDivs.length;
+  // pageVDivs.forEach(el => el.remove())
+  // const storage = store.PaginationPlus;
   const pageContentAreaHeight =
     pageOptions.pageHeight - pageOptions.pageHeaderHeight * 2;
   const paginationElement = editorDom.querySelector("[data-rm-pagination]");
@@ -470,7 +574,7 @@ const calculatePageCount = (
 
 function addTempBreakElement(bid: string, breakHeight: number) {
   const pageVDiv = document.createElement("div");
-  pageVDiv.classList.add("vdiv-spacer");
+  pageVDiv.classList.add("page-vdiv");
   pageVDiv.style.width = "100%";
   pageVDiv.style.backgroundColor = "green";
   pageVDiv.style.height = (breakHeight || 0) + "px";
@@ -502,16 +606,74 @@ function getPagesInfo(
   };
 }
 
+function measureElement(
+  ce: HTMLElement,
+  parentOffset: number,
+  scrollTop: number
+) {
+  const rect = ce.getBoundingClientRect();
+  const styles = window.getComputedStyle(ce);
+  const height = rect.height || 0;
+  const marginTop = parseFloat(styles.marginTop) || 0;
+  const marginBottom = parseFloat(styles.marginBottom) || 0;
+  const borderTop = parseFloat(styles.borderTop) || 0;
+  const borderBottom = parseFloat(styles.borderBottom) || 0;
 
+  let elementHeight =
+    height + marginTop + marginBottom + borderTop + borderBottom;
+  // let elementOffsetTop = ce.offsetTop;
+  let elementOffsetTop = rect.top + scrollTop - parentOffset;
+  if (elementOffsetTop < 0) elementOffsetTop = 0;
+  // const el2 = getTopWithMargin(ce, rect)
+  if (styles.display === "contents") {
+    // if (ce.tagName === "TABLE") {
+    if (ce.children.length > 0) {
+      elementOffsetTop = 0;
+      elementHeight = 0;
+      for (let i = 0; i < ce.children.length; i++) {
+        const rect = ce.children[i].getBoundingClientRect();
+        const styles = window.getComputedStyle(ce.children[i]);
+        const height = rect.height || 0;
+        const marginTop = parseFloat(styles.marginTop) || 0;
+        const marginBottom = parseFloat(styles.marginBottom) || 0;
+        const borderTop = parseFloat(styles.borderTop) || 0;
+        const borderBottom = parseFloat(styles.borderBottom) || 0;
+        if (i === 0) {
+          // elementOffsetTop = (ce.children[i] as HTMLElement).offsetTop;
+          elementOffsetTop =
+            // getTopWithMargin(ce.children[i] as HTMLElement, rect) -
+            rect.top + scrollTop - parentOffset;
+          if (elementOffsetTop < 0) elementOffsetTop = 0;
+        }
+        elementHeight +=
+          height + marginTop + marginBottom + borderTop + borderBottom;
+      }
+      return {
+        rect: null,
+        styles: null,
+        height: elementHeight,
+        offsetTop: elementOffsetTop,
+      };
+    }
+  }
+  return {
+    rect,
+    styles,
+    height: elementHeight,
+    offsetTop: elementOffsetTop,
+  };
+}
 
-const calculateVDivsHeight = (
+const calculatePageBreaksHeight = (
   view: EditorView,
   store: Record<string, unknown>,
   pageOptions: PaginationPlusOptions
 ) => {
-  // L'idea è quella di modificare le altezze dei vdiv-spacer esistenti
+  // L'idea è quella di modificare le altezze dei page-vdiv esistenti
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
   const storage = store.PaginationPlus as PaginationPlusStorageOptions
   const editorDom = view.dom;
+  const parentOffset = editorDom.offsetTop;
 
   const headerFooterHeight =
     pageOptions.pageHeaderHeight * 2 + pageOptions.pageGap;
@@ -527,7 +689,7 @@ const calculateVDivsHeight = (
     const pbs = editorDom.querySelectorAll("[data-break]");
     if (pbs && pbs.length > 0) {
       // 1. Stimiamo una quantità di pagine che potrebbero risultare dopo l'algoritmo
-      let pageCount = calculatePageCount(view, pageOptions);
+      let pageCount = calculatePageCount(view, store, pageOptions);
       pageCount += pbs.length + 2;
 
       // 2. Se serve, aggiungiamo PageBreakDefinition che mancano
@@ -546,10 +708,21 @@ const calculateVDivsHeight = (
       }
 
       // 3. Aggiorniamo le altezze del divisori
-      const pageVDivs = editorDom.querySelectorAll(".vdiv-spacer");
+      const pageVDivs = editorDom.querySelectorAll(".page-vdiv");
 
+      /*
+      let index = pbs.length - storage.breaksToUpdate;
+      if (index < 0) {
+        index = 0;
+        storage.breaksToUpdate = pbs.length;
+      }
+      */
+      let index = 0;
       for (const pb of pbs) {
-        const pbElement = pb as HTMLElement;      
+        // const pbElement = pbs[index] as HTMLElement;
+        const pbElement = pb as HTMLElement;
+        // pbElement.style.marginTop = "0px";
+        // const direction = pbElement.dataset.break === "after" ? 1 : -1;
 
         // N.B. l'idea è che il "blocco" pb + vdiv deve essere considerato come una singola identità
         // per non sbagliare i calcoli
@@ -557,7 +730,7 @@ const calculateVDivsHeight = (
         let offsetTop = pbElement.offsetTop
         if (
           pbElement.dataset.break === "before" &&
-          (pbElement.previousElementSibling as HTMLElement).classList.contains("vdiv-spacer")
+          (pbElement.previousElementSibling as HTMLElement).classList.contains("page-vdiv")
         ) {
           offsetTop = (pbElement.previousElementSibling as HTMLElement).offsetTop
         }
@@ -589,13 +762,12 @@ const calculateVDivsHeight = (
             breakHeight = 1;
           }
 
-          storage.vdivs.set(pbElement.dataset.bid!, {
+          storage.breaks.set(pbElement.dataset.bid!, {
             type: 0,
             dir: 1,
             height: breakHeight,
-            lastTop: pbElement.offsetTop
           });
-          // storage.breaksLastTop[index] = pbElement.offsetTop;
+          storage.breaksLastTop[index] = pbElement.offsetTop;
 
           let pageVDiv = null
           for (const pv of pageVDivs) {
@@ -649,7 +821,13 @@ const calculateVDivsHeight = (
           if (breakHeight < 0) {
             breakHeight = 1;
           }
-         
+
+          storage.breaks.set(pbElement.dataset.bid!, {
+            type: 0,
+            dir: -1,
+            height: breakHeight,
+          });
+
           let pageVDiv = null
           for (const pv of pageVDivs) {
             if ((pv as HTMLElement).dataset.bid === pbElement.dataset.bid) {
@@ -671,15 +849,10 @@ const calculateVDivsHeight = (
           }
 
           // impostiamo alla fine dopo l'inserimento del pageVDiv
-          storage.vdivs.set(pbElement.dataset.bid!, {
-            type: 0,
-            dir: -1,
-            height: breakHeight,
-            lastTop: pbElement.offsetTop
-          });
+          storage.breaksLastTop[index] = pbElement.offsetTop;
         }
         // storage.breaksToUpdate--;
-        // index++;
+        index++;
       }
 
       // 4. Ripristiniamo il pageCount iniziale
@@ -690,7 +863,7 @@ const calculateVDivsHeight = (
       }
     }
   }
-  return true // storage.breaksToUpdate <= 0;
+  return storage.breaksToUpdate <= 0;
 };
 
 const emptyPageBreakDefinition = (
@@ -859,7 +1032,7 @@ function createDecoration(
       const tempBreaks = view.dom.querySelectorAll(".rm-temp-break");
       tempBreaks.forEach((el) => el.remove());
 
-      const pageCount = calculatePageCount(view, pageOptions);
+      const pageCount = calculatePageCount(view, editor.storage, pageOptions);
 
       for (let i = 0; i < pageCount; i++) {
         if (i === 0) {
@@ -909,26 +1082,26 @@ function createDividerDecoration(
 ): Decoration[] {
   const breaksDeco: Decoration[] = [];
 
-  if (editor.storage.PaginationPlus.vdivs.size > 0) {
+  if (editor.storage.PaginationPlus.breaks.size > 0) {
     state.doc.forEach((node, offset) => {
       if (node.type.name === "pb") {
-        const curDiv = editor.storage.PaginationPlus.vdivs.get(
+        const curBreak = editor.storage.PaginationPlus.breaks.get(
           node.attrs.bid
         );
-        if (!curDiv) return true;
+        if (!curBreak) return true;
         const pageVDiv = document.createElement("div");
-        pageVDiv.classList.add("vdiv-spacer");
+        pageVDiv.classList.add("page-vdiv");
         pageVDiv.style.width = "100%";
         pageVDiv.style.backgroundColor = node.attrs.type && node.attrs.type === "after" ? "blue" : "green";
         // pageVDiv.style.marginTop = (curBreak.height || 0) + "px";
         // pageVDiv.style.height = "1px";
-        pageVDiv.style.height = (curDiv.height || 0) + "px";
+        pageVDiv.style.height = (curBreak.height || 0) + "px";
         pageVDiv.dataset["bid"] = node.attrs.bid;
         // Insert a decoration immediately after this node
         const widget = Decoration.widget(
-          curDiv.dir === -1 ? offset : offset + node.nodeSize,
+          curBreak.dir === -1 ? offset : offset + node.nodeSize,
           pageVDiv,
-          { side: curDiv.dir }
+          { side: curBreak.dir }
         );
 
         // counter++;
@@ -939,3 +1112,132 @@ function createDividerDecoration(
 
   return breaksDeco;
 }
+
+/*
+const calculatePageCount = (
+  view: EditorView,
+  store: Record<string, any>,
+  pageOptions: PaginationPlusOptions
+) => {
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  const storage = store.PaginationPlus;
+  const editorDom = view.dom;
+  const parentOffset = editorDom.offsetTop;
+
+  const pageContentAreaHeight =
+    pageOptions.pageHeight - pageOptions.pageHeaderHeight * 2;
+  const paginationElement = editorDom.querySelector("[data-rm-pagination]");
+  const currentPageCount = getExistingPageCount(view);
+
+  if (paginationElement) {
+    const pbs = editorDom.querySelectorAll("[data-break]");
+    if (pbs && pbs.length > 0) {
+      // const tempDiv = editorDom.querySelectorAll(".page-vdiv");
+      // tempDiv.forEach(el => el.remove())
+      storage.accBreaksHeight = 0;
+
+      const headerFooterHeight = 
+        pageOptions.pageHeaderHeight * 2 + pageOptions.pageGap;
+
+      if (pbs.length != storage.breaksLastPos.length) {
+        // Dobbiamo aggiornare i breaks
+        storage.breaksHaveChanged = true;
+        storage.breaksLastPos = Array(pbs.length).fill(-1);
+        storage.breaks.clear();
+      }
+
+      // pbs.forEach((pb, index) => {
+      let index = 0;
+      for (const pb of pbs) {
+        const pbElement = pb as HTMLElement;
+        const { offsetTop, height } = measureElement(
+          pbElement,
+          parentOffset,
+          scrollTop
+        );
+        // const offsetTop = pbElement.offsetTop;
+        if (offsetTop != storage.breaksLastPos[index]) {
+          storage.breaksHaveChanged = true;
+          storage.breaksLastPos[index] = offsetTop;
+
+          const pi = getPagesInfo(
+            offsetTop + storage.accBreaksHeight, // + borderTop,
+            pageContentAreaHeight +
+              pageOptions.pageHeaderHeight +
+              headerFooterHeight,
+            pageContentAreaHeight + headerFooterHeight
+          );
+
+          if (pbElement.dataset.break === "after") {
+            const breakHeight =
+              (pi.index === 0
+                ? pageContentAreaHeight +
+                  pageOptions.pageHeaderHeight +
+                  0
+                : pageContentAreaHeight + 0) -
+              pi.mt -
+              height;
+
+            storage.breaks.set(pbElement.dataset.bid, {
+              type: 0,
+              dir: 1,
+              height: breakHeight,
+            });
+            storage.accBreaksHeight += breakHeight;
+            
+            // if (pbElement.nextElementSibling) {
+            //  view.dom.insertBefore(
+            //    addTempBreakElement(breakHeight),
+            //    pbElement.nextElementSibling
+            //  );
+            // } else {
+            //   view.dom.append(addTempBreakElement(breakHeight));
+            // }                          
+          }
+        }
+        index++;
+      }
+    }
+
+    const lastElementOfEditor = editorDom.lastElementChild;
+    const lastPageBreak =
+      paginationElement.lastElementChild?.querySelector(".breaker");
+    if (lastElementOfEditor && lastPageBreak) {
+      const lastPageGap =
+        storage.accBreaksHeight +
+        lastElementOfEditor.getBoundingClientRect().bottom -
+        lastPageBreak.getBoundingClientRect().bottom;
+
+      if (lastPageGap > 0) {
+        const addPage = Math.ceil(lastPageGap / pageContentAreaHeight);
+        return currentPageCount + addPage;
+        // pageCalculated = currentPageCount + addPage;
+      } else {
+        const lpFrom = -pageOptions.pageHeaderHeight;
+        const lpTo = -(pageOptions.pageHeight - pageOptions.pageHeaderHeight);
+        if (lastPageGap > lpTo && lastPageGap < lpFrom) {
+          return currentPageCount;
+          // pageCalculated = currentPageCount;
+        } else if (lastPageGap < lpTo) {
+          const pageHeightOnRemove =
+            pageOptions.pageHeight + pageOptions.pageGap;
+          const removePage = Math.floor(lastPageGap / pageHeightOnRemove);
+          return currentPageCount + removePage;
+          // pageCalculated = currentPageCount + removePage;
+        } else {
+          return currentPageCount;
+          // pageCalculated = currentPageCount;
+        }
+      }
+    }
+    return 1;
+    // pageCalculated = 1;
+  } else {
+    const editorHeight = editorDom.scrollHeight;
+    const pageCount = Math.ceil(editorHeight / pageContentAreaHeight);
+    return pageCount <= 0 ? 1 : pageCount;
+    /// pageCalculated = pageCount <= 0 ? 1 : pageCount;
+  }
+  // return pageCalculated;
+};
+*/

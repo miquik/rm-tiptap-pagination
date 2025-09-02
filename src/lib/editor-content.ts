@@ -24,10 +24,10 @@ export const editorContent = {
         { 
             "type": "pb",
             "attrs": {
-                "type": "before",
+                "type": "after",
                 "bid": "c97edaf7-2ef0-4ca5-960c-610c58921931"
             }
-        },
+        },        
         {
             "type": "paragraph",
             "content": [
@@ -414,6 +414,13 @@ export const editorContent = {
                     ]
                 }
             ]
+        },
+        { 
+            "type": "pb",
+            "attrs": {
+                "type": "before",
+                "bid": "aaa-c97edaf7-2ef0-4ca5-960c"
+            }
         },
         {
             "type": "blockquote",
