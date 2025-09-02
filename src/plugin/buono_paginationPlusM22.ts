@@ -724,17 +724,12 @@ const calculatePageBreaksHeight = (
         // pbElement.style.marginTop = "0px";
         // const direction = pbElement.dataset.break === "after" ? 1 : -1;
 
-        // N.B. l'idea è che il "blocco" pb + vdiv deve essere considerato come una singola identità
-        // per non sbagliare i calcoli
-        const height = pbElement.offsetHeight
-        let offsetTop = pbElement.offsetTop
-        if (
-          pbElement.dataset.break === "before" &&
-          (pbElement.previousElementSibling as HTMLElement).classList.contains("page-vdiv")
-        ) {
-          offsetTop = (pbElement.previousElementSibling as HTMLElement).offsetTop
-        }
-        
+        const { offsetTop, height } = measureElement(
+          pbElement,
+          parentOffset,
+          scrollTop
+        );
+
         if (pbElement.dataset.break === "after") {
           const dirOffsetTop = offsetTop + height;
           const pad = null;
@@ -794,9 +789,27 @@ const calculatePageBreaksHeight = (
               );
             }
           }
+
+          // storage.accBreaksHeight += breakHeight;
+          // accBH += breakHeight
+          /*
+          if (pageVDivs.length > index) {
+            const pageVDiv = pageVDivs[index] as HTMLElement;
+            const minH = `${breakHeight}px`;
+            pageVDiv.style.minHeight = minH;
+            // await nextFrame();
+            // pageVDiv.style.marginTop = minH
+          }
+          */
         }
 
-        if (pbElement.dataset.break === "before") {         
+        if (pbElement.dataset.break === "before") {
+          const { offsetTop } = measureElement(
+            pbElement.previousElementSibling as HTMLElement,
+            parentOffset,
+            scrollTop
+          );
+
           const dirOffsetTop = offsetTop + height;
           const pi = getPagesInfo(
             dirOffsetTop,
