@@ -1,5 +1,4 @@
-import { Node, mergeAttributes } from "@tiptap/core";
-import { v4 as uuidv4 } from "uuid";
+import { Node } from "@tiptap/core";
 
 export const PageBreak = Node.create({
   name: "pb",
@@ -42,10 +41,10 @@ export const PageBreak = Node.create({
 
   // https://discuss.prosemirror.net/t/firefox-contenteditable-false-cursor-bug/5016/2
   renderHTML({ HTMLAttributes }) {
-    const { type, bid} = HTMLAttributes;
+    const { type } = HTMLAttributes;
 
     
-    const attrs: any = {};
+    const attrs: Record<string, unknown> = {};
     attrs["data-break"] = type || 'after';
     attrs["data-bid"] = HTMLAttributes['data-bid'] 
     attrs["draggable"] = false;

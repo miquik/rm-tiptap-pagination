@@ -809,10 +809,9 @@ const calculatePageBreaksHeight = (
 
           let breakHeight =
             (pi.index === 0
-              ? pageContentAreaHeight + pageOptions.pageHeaderHeight + 0
-              : pageContentAreaHeight + 0) -
-            pi.mt -
-            0;
+              ? pageContentAreaHeight + pageOptions.pageHeaderHeight + headerFooterHeight
+              : pageContentAreaHeight + headerFooterHeight) -
+            pi.mt + height;
           const pad = null
           if (pad) {
             pbElement.style.marginTop = `${pad}px`;

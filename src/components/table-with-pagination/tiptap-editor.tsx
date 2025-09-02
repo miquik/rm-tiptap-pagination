@@ -32,7 +32,7 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
         pageHeight: 842,
         pageGap: 20,
         pageBreakBackground: "hsl(var(--background))",
-        pageHeaderHeight: 25,
+        pageHeaderHeight: 40,
         // pageFooterHeight: 25,
         footerRight: "Made with ❤️ by Romik",
         footerLeft: "Page {page}",
