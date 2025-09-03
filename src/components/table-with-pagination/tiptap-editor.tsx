@@ -29,7 +29,7 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
       TableHeaderPlus,
       PageBreak,
       PaginationPlusM22.configure({
-        pageHeight: 842,
+        pageHeight: 800,
         pageGap: 20,
         pageBreakBackground: "hsl(var(--background))",
         pageHeaderHeight: 40,

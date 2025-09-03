@@ -12,7 +12,7 @@ import { PaginationTable } from "@/tableplus";
 import { ImagePlus } from "tiptap-image-plus";
 import { editorContent } from "@/lib/editor-content";
 import { Toolbar } from "./editor/toolbar";
-import { PaginationPlusM22 } from "@/plugin/paginationPlusM22";
+import { PaginationPlusM22 } from "@/plugin/paginationPlusM22_2";
 import { PageBreak } from "@/extension/pageBreak";
 
 const { TablePlus, TableRowPlus, TableCellPlus, TableHeaderPlus } =
@@ -40,7 +40,7 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
         },
       }),
       PaginationPlusM22.configure({
-        pageHeight: 842,
+        pageHeight: 800,
         pageGap: 20,
         pageBreakBackground: "hsl(var(--background))",
         pageHeaderHeight: 25,
@@ -53,8 +53,8 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
         marginBottom: 50,
         marginLeft: 70,
         marginRight: 70,
-        contentMarginTop: 30,
-        contentMarginBottom: 30,
+        contentMarginTop: 35,
+        contentMarginBottom: 35,
       }),
     ],
     // content: editorContentLong,
