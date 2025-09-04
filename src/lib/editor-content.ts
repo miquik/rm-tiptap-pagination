@@ -1,6 +1,7 @@
 export const editorContent = {
     "type": "doc",
     "content": [
+        /*
         {
             "type": "heading",
             "attrs": {
@@ -21,6 +22,7 @@ export const editorContent = {
                 "title": null,
             }
         },
+        */
         { 
             "type": "pb",
             "attrs": {
@@ -414,13 +416,6 @@ export const editorContent = {
                     ]
                 }
             ]
-        },
-        { 
-            "type": "pb",
-            "attrs": {
-                "type": "before",
-                "bid": "aaa-c97edaf7-2ef0-4ca5-960c"
-            }
         },
         {
             "type": "blockquote",

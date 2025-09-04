@@ -42,6 +42,7 @@
 }
 
 #editor p[data-break="after"] {
+  display: flex;
   margin: 0;
   padding: 0;
   /* line-height: 3px; */
@@ -51,6 +52,7 @@
   --page-br: after;
 }
 #editor p[data-break="before"] {
+  display: flex;
   margin: 0;
   padding: 0;
   /* line-height: 3px; */

@@ -4,6 +4,7 @@ import { Decoration, DecorationSet, EditorView } from "@tiptap/pm/view";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
 let debugCounter = 0
+const MIN_H_GUARD = 4
 
 export interface PaginationPlusOptions {
   pageHeight: number;
@@ -37,7 +38,7 @@ type VDivInfo = {
   type: number; // 0 = PAGEBREAK, 1 = FIGURE
   dir: number; // -1 = before, 1 = after
   height: number;
-  lastTop: number;
+  lastBottom: number;
 };
 
 interface PaginationPlusStorageOptions {
@@ -73,7 +74,7 @@ const vdivsMustBeRecalculated = (
   for (const pb of pbs) {
     const pbElement = pb as HTMLElement
     const br = vdivs.get(pbElement.dataset.bid ?? "")
-    if (!br || pbElement.offsetTop != br.lastTop) {
+    if (!br || Math.abs(pbElement.offsetTop + pbElement.offsetHeight - br.lastBottom) > MIN_H_GUARD) {
       return true;
     }
   }
@@ -433,6 +434,18 @@ function addTempBreakElement(bid: string, breakHeight: number) {
   return pageVDiv;
 }
 
+function getDividerPosition(
+  bottom: number,
+  pageHeight: number
+): PageInfo {
+  return {
+    index: Math.floor(bottom / pageHeight),
+    mt: bottom % pageHeight,
+    cis: -1,
+    cie: -1,
+  }
+}
+/*
 function getPagesInfo(
   top: number,
   firstHeight: number,
@@ -456,7 +469,7 @@ function getPagesInfo(
     cie: -1,
   };
 }
-
+*/
 
 
 const calculateVDivsHeight = (
@@ -468,11 +481,14 @@ const calculateVDivsHeight = (
   const storage = store.PaginationPlus as PaginationPlusStorageOptions
   const editorDom = view.dom;
 
-  const headerFooterHeight =
-    pageOptions.pageHeaderHeight * 2 + pageOptions.pageGap;
+  const _pageGap = pageOptions.pageGap;
+  const _pageHeaderHeight = (pageOptions.pageHeaderHeight + pageOptions.contentMarginTop + pageOptions.marginTop);
+  const _pageFooterHeight = (pageOptions.pageFooterHeight + pageOptions.contentMarginBottom + pageOptions.marginBottom);
+  // const _pageHeight = pageOptions.pageHeight - _pageHeaderHeight - _pageFooterHeight;
 
-  const pageContentAreaHeight =
-    pageOptions.pageHeight - pageOptions.pageHeaderHeight * 2;
+  // const headerFooterHeight = _pageHeaderHeight + _pageFooterHeight + _pageGap
+  
+
   const paginationElement = editorDom.querySelector("[data-rm-pagination]");
   // const HEADING = editorDom.querySelector(".heading") as HTMLElement;
 
@@ -509,21 +525,23 @@ const calculateVDivsHeight = (
         // N.B. l'idea è che il "blocco" pb + vdiv deve essere considerato come una singola identità
         // per non sbagliare i calcoli
         const height = pbElement.offsetHeight
-        let offsetTop = pbElement.offsetTop
+        let offsetBottom = pbElement.offsetTop + height
         if (
           pbElement.dataset.break === "before" &&
           (pbElement.previousElementSibling as HTMLElement).classList.contains("vdiv-spacer")
         ) {
-          offsetTop = (pbElement.previousElementSibling as HTMLElement).offsetTop
+          offsetBottom = (pbElement.previousElementSibling as HTMLElement).offsetTop + height
         }
         
         if (pbElement.dataset.break === "after") {
-          const dirOffsetTop = offsetTop + height;
-          const pad = null;
-          if (pad) {
-            pbElement.style.marginTop = `${pad}px`;
-          }
+          const pi = getDividerPosition(
+            offsetBottom, 
+            pageOptions.pageHeight
+          )
 
+          // let breakHeight = pageOptions.pageHeight + _pageHeaderHeight + _pageGap - pi.mt
+          let breakHeight = pageOptions.pageHeight + pi.index * _pageGap + + _pageHeaderHeight + _pageGap - pi.mt
+          /*
           const pi = getPagesInfo(
             dirOffsetTop + (pad || 0),
             pageContentAreaHeight +
@@ -539,7 +557,7 @@ const calculateVDivsHeight = (
               : pageContentAreaHeight + 0) -
             pi.mt -
             0; // height;
-
+          */
           if (breakHeight < 0) {
             breakHeight = 1;
           }
@@ -548,7 +566,7 @@ const calculateVDivsHeight = (
             type: 0,
             dir: 1,
             height: breakHeight,
-            lastTop: pbElement.offsetTop
+            lastBottom: offsetBottom
           });
           // storage.breaksLastTop[index] = pbElement.offsetTop;
 
@@ -579,7 +597,14 @@ const calculateVDivsHeight = (
           }
         }
 
-        if (pbElement.dataset.break === "before") {         
+        if (pbElement.dataset.break === "before") {
+          const pi = getDividerPosition(
+            offsetBottom, 
+            pageOptions.pageHeight - _pageFooterHeight
+          )
+
+          let breakHeight = pageOptions.pageHeight + _pageHeaderHeight + _pageGap - pi.mt
+          /*         
           const dirOffsetTop = offsetTop + height;
           const pi = getPagesInfo(
             dirOffsetTop,
@@ -599,7 +624,7 @@ const calculateVDivsHeight = (
           if (pad) {
             pbElement.style.marginTop = `${pad}px`;
           }
-
+          */
           
           if (breakHeight < 0) {
             breakHeight = 1;
@@ -630,7 +655,7 @@ const calculateVDivsHeight = (
             type: 0,
             dir: -1,
             height: breakHeight,
-            lastTop: pbElement.offsetTop
+            lastBottom: offsetBottom
           });
         }
         // storage.breaksToUpdate--;
