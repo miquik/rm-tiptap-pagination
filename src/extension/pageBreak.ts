@@ -48,6 +48,6 @@ export const PageBreak = Node.create({
     attrs["data-break"] = type || 'after';
     attrs["data-bid"] = HTMLAttributes['data-bid'] 
     attrs["draggable"] = false;
-    return ["p", attrs, 0];
+    return ["p", attrs, "………"];
   },
 });

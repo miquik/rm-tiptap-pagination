@@ -280,6 +280,14 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
             );
             this.editor.view.dispatch(tr);
 
+            /*
+            // ricalcoliamo cmq il pagecount
+            const tr2 = this.editor.view.state.tr.setMeta(
+              page_count_meta_key,
+              Date.now()
+            );
+            this.editor.view.dispatch(tr2);
+            */
             pauseObserver = false;
           }
 
@@ -600,7 +608,7 @@ const calculateVDivsHeight = (
         if (pbElement.dataset.break === "before") {
           const pi = getDividerPosition(
             offsetBottom, 
-            pageOptions.pageHeight - _pageFooterHeight
+            pageOptions.pageHeight + _pageGap
           )
 
           let breakHeight = pageOptions.pageHeight + _pageHeaderHeight + _pageGap - pi.mt

@@ -458,6 +458,13 @@ export const editorContent = {
                 }
             ]
         },
+        { 
+            "type": "pb",
+            "attrs": {
+                "type": "after",
+                "bid": "a--97edaf7-2ef0-4ca5-960c-610c58921931"
+            }
+        },  
         {
             "type": "heading",
             "attrs": {
