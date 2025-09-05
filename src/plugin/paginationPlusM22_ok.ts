@@ -410,8 +410,8 @@ const calculatePageCount = (
         const addPage = Math.ceil(lastPageGap / pageContentAreaHeight);
         return currentPageCount + addPage;
       } else {
-        const lpFrom = -pageOptions.pageHeaderHeight;
-        const lpTo = -(pageOptions.pageHeight - pageOptions.pageHeaderHeight);
+        const lpFrom = -10;
+        const lpTo = -(pageOptions.pageHeight - 10);
         if (lastPageGap > lpTo && lastPageGap < lpFrom) {
           return currentPageCount;
         } else if (lastPageGap < lpTo) {
