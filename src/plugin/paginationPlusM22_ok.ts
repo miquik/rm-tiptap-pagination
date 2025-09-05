@@ -536,11 +536,11 @@ const calculateVDivsHeight = (
         if (pbElement.dataset.break === "after") {
           const pi = getDividerPosition(
             offsetBottom, 
-            pageOptions.pageHeight
+            pageOptions.pageHeight + _pageGap
           )
 
           // let breakHeight = pageOptions.pageHeight + _pageHeaderHeight + _pageGap - pi.mt
-          let breakHeight = pageOptions.pageHeight + pi.index * _pageGap + + _pageHeaderHeight + _pageGap - pi.mt
+          let breakHeight = pageOptions.pageHeight + _pageHeaderHeight + _pageGap - pi.mt
           /*
           const pi = getPagesInfo(
             dirOffsetTop + (pad || 0),

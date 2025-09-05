@@ -12,7 +12,7 @@ import { PaginationTable } from "@/tableplus";
 import { ImagePlus } from "tiptap-image-plus";
 import { editorContent } from "@/lib/editor-content";
 import { Toolbar } from "./editor/toolbar";
-import { PaginationPlusM22 } from "@/plugin/paginationPlusM22_2";
+import { PaginationPlusM22 } from "@/plugin/paginationPlusM22_ok";
 import { PageBreak } from "@/extension/pageBreak";
 
 const { TablePlus, TableRowPlus, TableCellPlus, TableHeaderPlus } =
