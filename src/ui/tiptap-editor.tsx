@@ -14,6 +14,7 @@ import { editorContent } from "@/lib/editor-content";
 import { Toolbar } from "./editor/toolbar";
 import { PaginationPlusM22 } from "@/plugin/paginationPlusM22_ok";
 import { PageBreak } from "@/extension/pageBreak";
+import { PaginationPlusM23 } from "@/plugin/paginationPlusM23";
 
 const { TablePlus, TableRowPlus, TableCellPlus, TableHeaderPlus } =
   PaginationTable;
@@ -39,7 +40,7 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
           borderRadius: "10px",
         },
       }),
-      PaginationPlusM22.configure({
+      PaginationPlusM23.configure({
         pageHeight: 800,
         pageGap: 20,
         pageBreakBackground: "hsl(var(--background))",

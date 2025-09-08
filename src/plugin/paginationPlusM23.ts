@@ -117,7 +117,7 @@ const vdivsMustBeRecalculated = (
 const page_count_meta_key = "PAGE_COUNT_META_KEY";
 const vdivs_meta_key = "VDIVS_META_KEY";
 
-export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
+export const PaginationPlusM23 = Extension.create<PaginationPlusOptions>({
   name: "PaginationPlus",
   addOptions() {
     return {
@@ -280,10 +280,10 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
               pageCount = pageCount.map(tr.mapping, tr.doc);
             }
 
-            const decoToUpdate = tr.getMeta(PaginationPluginKey)
+            const meta = tr.getMeta(PaginationPluginKey)
 
             // if (tr.getMeta(vdivs_meta_key)) {
-            if ((decoToUpdate & 1) !== 0) {
+            if (meta && (meta.decoToUpdate & 1) !== 0) {
               const widgetList = createDividerDecoration(
                 editor,
                 newState
@@ -293,7 +293,7 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
             }
 
             // if (tr.getMeta(page_count_meta_key)) {
-            if ((decoToUpdate & 2) !== 0) {
+            if (meta && (meta.decoToUpdate & 2) !== 0) {
               const widgetList = createDecoration(
                 editor,
                 newState,
