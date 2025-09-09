@@ -40,7 +40,7 @@ const TiptapEditor = ({onlyEditor}: {onlyEditor: boolean}) => {
           borderRadius: "10px",
         },
       }),
-      PaginationPlusM23.configure({
+      PaginationPlusM22.configure({
         pageHeight: 800,
         pageGap: 20,
         pageBreakBackground: "hsl(var(--background))",

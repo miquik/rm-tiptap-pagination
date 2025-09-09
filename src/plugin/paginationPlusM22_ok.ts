@@ -298,7 +298,7 @@ export const PaginationPlusM22 = Extension.create<PaginationPlusOptions>({
               this.editor.view,              
               this.options
             );
-            if (currentPageCount !== pageCount) {
+            if (currentPageCount !== pageCount) {              
               console.log('pageCount: %d - exist: %d - calc: %d', debugCounter++, currentPageCount, pageCount)
               const tr = this.editor.view.state.tr.setMeta(
                 page_count_meta_key,
@@ -417,7 +417,7 @@ const calculatePageCount = (
         } else if (lastPageGap < lpTo) {
           const pageHeightOnRemove =
             pageOptions.pageHeight + pageOptions.pageGap;
-          const removePage = Math.floor(lastPageGap / pageHeightOnRemove);
+          const removePage = Math.ceil(lastPageGap / pageHeightOnRemove);
           return currentPageCount + removePage;
         } else {
           return currentPageCount;
